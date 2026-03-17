@@ -22,41 +22,10 @@ Apple.requestCredential = async function (options, oauthCallback, nativeCallback
 	} else if (!options) {
 		options = {}
 	}
-
-	// For web OAuth flow, open popup IMMEDIATELY to prevent Safari AutoFill interception
-	// Safari requires window.open() to be called synchronously within the user gesture
-	let popupWindow = null
-	if (!nativeFlow) {
-		try {
-			// Open blank popup immediately to maintain user gesture chain
-			// This prevents Safari from showing its native "Sign in with Apple" dialog
-			const width = 650
-			const height = 600
-			const screenX = typeof window.screenX !== "undefined" ? window.screenX : window.screenLeft
-			const screenY = typeof window.screenY !== "undefined" ? window.screenY : window.screenTop
-			const outerWidth = typeof window.outerWidth !== "undefined" ? window.outerWidth : document.body.clientWidth
-			const outerHeight =
-				typeof window.outerHeight !== "undefined" ? window.outerHeight : document.body.clientHeight - 22
-			const left = screenX + (outerWidth - width) / 2
-			const top = screenY + (outerHeight - height) / 2
-			const features = `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
-
-			popupWindow = window.open("about:blank", "Login", features)
-			if (popupWindow && popupWindow.focus) {
-				popupWindow.focus()
-			}
-		} catch (e) {
-			console.error("Failed to open popup window:", e)
-		}
-	}
-
 	const appId = getAppIdFromOptions(options)
 	const config = await getServiceConfiguration({ appId })
 
 	if (!config) {
-		if (popupWindow) {
-			popupWindow.close()
-		}
 		credentialRequestCompleteCallback && credentialRequestCompleteCallback(new ServiceConfiguration.ConfigError())
 		return
 	}
@@ -86,36 +55,16 @@ Apple.requestCredential = async function (options, oauthCallback, nativeCallback
 				appId: options.appId,
 			})}`
 
-		// If we successfully opened a popup, navigate it to the OAuth URL
-		if (popupWindow && !popupWindow.closed) {
-			popupWindow.location.href = loginUrl
-
-			// Set up popup monitoring
-			const checkPopupOpen = setInterval(() => {
-				let popupClosed
-				try {
-					popupClosed = popupWindow.closed || popupWindow.closed === undefined
-				} catch (e) {
-					return
-				}
-				if (popupClosed) {
-					clearInterval(checkPopupOpen)
-					credentialRequestCompleteCallback(credentialToken)
-				}
-			}, 100)
-		} else {
-			// Fallback to standard OAuth.launchLogin if popup failed
-			OAuth.launchLogin({
-				loginService: "apple",
-				loginStyle,
-				loginUrl,
-				credentialRequestCompleteCallback,
-				credentialToken,
-				popupOptions: {
-					height: 600,
-				},
-			})
-		}
+		OAuth.launchLogin({
+			loginService: "apple",
+			loginStyle,
+			loginUrl,
+			credentialRequestCompleteCallback,
+			credentialToken,
+			popupOptions: {
+				height: 600,
+			},
+		})
 		return
 	}
 
