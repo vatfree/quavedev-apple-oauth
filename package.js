@@ -32,6 +32,6 @@ Npm.depends({
 })
 
 Cordova.depends({
-	"cordova-plugin-sign-in-with-apple": "0.1.1",
+	"cordova-plugin-sign-in-with-apple": "0.1.2",
 	"cordova-plugin-device": "2.1.0",
 })
